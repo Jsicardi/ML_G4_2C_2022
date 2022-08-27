@@ -1,5 +1,6 @@
 {
-    "type" : "nationality",
-    "examples_file" : "resources/ej1_examples.xlsx",
-    "queries_file": "resources/ej1_queries.xlsx"
+    "type": "titles",
+    "examples_file": "resources/ej2_examples.xlsx",
+    "categories": ["Internacional","Salud","Economia","Deportes"],
+    "max_attributes": 50
 }

@@ -31,11 +31,22 @@ def parse_properties():
         exit(-1)
 
     queries = json_values.get("queries_file")
-    if queries == None:
+    if queries == None and type == "nationality":
         print("Queries file required")
         exit(-1)
 
-    return Properties(type,examples,queries)
+    categories = json_values.get("categories")
+    if categories == None and type == "titles":
+        print("Categories required")
+        exit(-1)
+
+    max_attributes = json_values.get("max_attributes")
+
+    if max_attributes == None and type == "titles":
+        print("Max attributes required")
+        exit(-1)
+    
+    return Properties(type,examples,queries,categories,max_attributes)
 
 def parse_file(file):
     xls = pd.ExcelFile(file)
