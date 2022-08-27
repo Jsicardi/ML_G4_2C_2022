@@ -1,0 +1,5 @@
+{
+    "type" : "nationality",
+    "examples_file" : "resources/ej1_examples.xlsx",
+    "queries_file": "resources/ej1_queries.xlsx"
+}
