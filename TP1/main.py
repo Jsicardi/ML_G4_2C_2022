@@ -14,7 +14,11 @@ def __main__():
         output:ClassifierOutput = classifier.classify(classifier_properties)
         generate_classifier_output(classifier_properties,output)
     elif(properties.type == "titles"):
-        analyze_text_file(properties)
+        properties = analyze_text_file(properties)
+        classifier_properties:ClassifierProperties = get_classifier_properties(properties)
+        classifier:NaiveClassifier = NaiveClassifier()
+        output:ClassifierOutput = classifier.classify(classifier_properties)
+        generate_classifier_output(classifier_properties,output)
 
 if __name__ == "__main__":
     __main__()

@@ -1,6 +1,9 @@
 {
     "type": "titles",
-    "examples_file": "resources/ej2_examples.xlsx",
+    "training_file": "resources/ej2_dataset.xlsx",
+    "test_file" : "resources/ej1_test.xlsx",
     "categories": ["Internacional","Salud","Economia","Deportes"],
-    "max_attributes": 50
+    "max_attributes": 50,
+    "remove_characters": ",;:.\n!\"'?!",
+    "test_percentage": 0.1
 }

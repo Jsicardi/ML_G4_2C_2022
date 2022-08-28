@@ -3,11 +3,11 @@ import numpy as np
 
 class NaiveClassifier:
 
-    def get_class_probs(self,properties:ClassifierProperties,query):
+    def get_class_probs(self,properties:ClassifierProperties,test_value):
         class_probs = []
         for (class_idx,class_val) in enumerate(properties.classes):
                 class_prob = properties.absolute_probs[class_idx]
-                for (attr_idx,attr_val) in enumerate(query):
+                for (attr_idx,attr_val) in enumerate(test_value):
                     if attr_val == 1:
                         class_prob *= properties.conditional_probs[class_idx][attr_idx]
                     else:
@@ -18,9 +18,9 @@ class NaiveClassifier:
     def classify(self,properties:ClassifierProperties):
         predictions = []
         probabilities = []
-        for query in properties.queries:
+        for test_value in properties.test_values:
             probabilities.append([])
-            class_probs = self.get_class_probs(properties,query)
+            class_probs = self.get_class_probs(properties,test_value)
             total_prob = np.sum(class_probs)
             max_prob = 0
             prediction = ""
