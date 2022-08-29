@@ -137,7 +137,7 @@ def get_network_properties(properties:Properties):
         training_dataset[column_name] = np.where(training_dataset[column_name] < discretize_value, 0, training_dataset[column_name])
         training_dataset[column_name] = np.where(training_dataset[column_name] >= discretize_value, 1, training_dataset[column_name])
         training_dataset[column_name] = training_dataset[column_name].astype(int)
-        test_dataset[column_name] = np.where(test_dataset[column_name] < discretize_value, 0, test_dataset[column_name])
+        test_dataset[column_name] = np.where((test_dataset[column_name] < discretize_value) & (test_dataset[column_name] != -1), 0, test_dataset[column_name])
         test_dataset[column_name] = np.where(test_dataset[column_name] >= discretize_value,1 , test_dataset[column_name])
         test_dataset[column_name] = test_dataset[column_name].astype(int)
 
