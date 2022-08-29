@@ -1,18 +1,29 @@
 import json
-from locale import normalize
-from models import ClassifierOutput, ClassifierProperties, Properties
+from models import ClassifierOutput, ClassifierProperties, NetworkProperties, Properties
 import numpy as np
 import pandas as pd
 import pathlib
-from probabities_helper import get_probabilities
+from probabities_helper import get_newtwork_probabilities, get_probabilities
 
 def generate_classifier_output(properties:ClassifierProperties, output:ClassifierOutput):
     result_file = open("resources/classifier_results.csv", "w")
     columns_line = "Prediction"
-    print(properties.classes)
     for class_name in properties.classes:
         columns_line = columns_line + ",prob_{0}".format(class_name)
-    print(columns_line)
+
+    result_file.write("{0}\n".format(columns_line))
+    
+    for (pred_idx,prediction) in enumerate(output.predictions):
+        line = "{0}".format(prediction)
+        for prob in output.probabilities[pred_idx]:
+            line = line + ",{0}".format(prob)
+        result_file.write("{0}\n".format(line))
+
+def generate_network_output(properties:NetworkProperties, output:ClassifierOutput):
+    result_file = open("resources/classifier_results.csv", "w")
+    columns_line = "Prediction"
+    for class_name in properties.classes:
+        columns_line = columns_line + ",prob_{0}".format(class_name)
 
     result_file.write("{0}\n".format(columns_line))
     
@@ -42,7 +53,7 @@ def parse_properties():
         exit(-1)
 
     test = None
-    if type == "nationality":
+    if type != "titles":
         test = json_values.get("test_file")
         if test == None:
             print("Test file required")
@@ -66,8 +77,20 @@ def parse_properties():
     if test_percentage == None and type == "titles":
         print("Test percentage required")
         exit(-1)
+    
+    network_graph = json_values.get("network_graph")
 
-    return Properties(type,training,test,categories,max_attributes,remove_characters,test_percentage)
+    if network_graph == None and type == "admission":
+        print("Network graph required")
+        exit(-1)
+    
+    discretize_values = json_values.get("discretize_values")
+
+    if discretize_values == None and type == "admission":
+        print("Discretize values required")
+        exit(-1)
+
+    return Properties(type,training,test,categories,max_attributes,remove_characters,test_percentage,network_graph,discretize_values)
 
 def parse_xlsx_file(file):
     xls = pd.ExcelFile(file)
@@ -94,3 +117,30 @@ def get_classifier_properties(properties:Properties):
     attributes = training_dataset.columns[:-1]
     classes = np.unique(training_dataset[training_dataset.columns[-1]].values)
     return ClassifierProperties(attributes,classes,absolute_probs,conditional_probs,test_dataset.values)
+
+def get_network_properties(properties:Properties):
+    
+    training_dataset = None
+    if(pathlib.Path(properties.training_file).suffix == ".xlsx"):
+        training_dataset = parse_xlsx_file(properties.training_file)
+    else:
+        training_dataset = parse_csv_file(properties.training_file)
+
+    test_dataset = None
+    if(pathlib.Path(properties.test_file).suffix == ".xlsx"):
+        test_dataset = parse_xlsx_file(properties.test_file)
+    else:
+        test_dataset = parse_csv_file(properties.test_file)
+
+    for (node_idx,discretize_value) in enumerate(properties.discretize_values):
+        column_name = properties.network_graph[1][node_idx]
+        training_dataset[column_name] = np.where(training_dataset[column_name] < discretize_value, 0, training_dataset[column_name])
+        training_dataset[column_name] = np.where(training_dataset[column_name] >= discretize_value, 1, training_dataset[column_name])
+        training_dataset[column_name] = training_dataset[column_name].astype(int)
+        test_dataset[column_name] = np.where(test_dataset[column_name] < discretize_value, 0, test_dataset[column_name])
+        test_dataset[column_name] = np.where(test_dataset[column_name] >= discretize_value,1 , test_dataset[column_name])
+        test_dataset[column_name] = test_dataset[column_name].astype(int)
+
+    (root_probabilities,middle_probabilities,last_probabilities) = get_newtwork_probabilities(training_dataset,properties.network_graph[0],properties.network_graph[1],properties.network_graph[2])
+
+    return NetworkProperties(training_dataset.columns[1:],["no_admit","admit"],root_probabilities,middle_probabilities,last_probabilities,test_dataset.values)
