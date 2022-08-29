@@ -8,9 +8,19 @@ from probabities_helper import get_probabilities
 
 def generate_classifier_output(properties:ClassifierProperties, output:ClassifierOutput):
     result_file = open("resources/classifier_results.csv", "w")
-    result_file.write("Prediction,Probability\n")
+    columns_line = "Prediction"
+    print(properties.classes)
+    for class_name in properties.classes:
+        columns_line = columns_line + ",prob_{0}".format(class_name)
+    print(columns_line)
+
+    result_file.write("{0}\n".format(columns_line))
+    
     for (pred_idx,prediction) in enumerate(output.predictions):
-        result_file.write("{0},{1}\n".format(prediction,max(output.probabilities[pred_idx])))
+        line = "{0}".format(prediction)
+        for prob in output.probabilities[pred_idx]:
+            line = line + ",{0}".format(prob)
+        result_file.write("{0}\n".format(line))
 
 # Receive parameters from config.json and encapsulate them into properties object
 def parse_properties():
