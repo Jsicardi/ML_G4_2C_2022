@@ -55,7 +55,7 @@ class BayesianNetwork:
                             prod_prob *= root_prob
                             sum_prob+=prod_prob
                         prob+=(properties.last_probabilities[test_value[2]-1][first_middle_value][second_middle_value][class_idx] * sum_prob)
-            else:
+            elif(test_value[0] != -1 and test_value[1] != -1):
                 for (cond_idx,conditional_probs) in enumerate(root_conditional_probs):
                     prob+=(conditional_probs[test_value[0]][test_value[1]][class_idx]) * root_absolute_probs[cond_idx]
 

@@ -31,6 +31,7 @@ def apply_laplace_network_last(dataset,root_node_column,middle_nodes_columns,las
 def get_probabilities(dataset):
     classes = np.unique(dataset[dataset.columns[-1]].values)
     absolute_probs = dataset[dataset.columns[-1]].value_counts(normalize=True).values
+
     conditional_probs = []
     laplace = False
     for classifier in classes:
@@ -51,7 +52,7 @@ def get_probabilities(dataset):
 
 def get_newtwork_probabilities(dataset, root_node_column, middle_nodes_columns, last_node_column):
     
-    root_probabilities = dataset[root_node_column].value_counts(normalize=True).values
+    root_probabilities = dataset[root_node_column].value_counts(normalize=True).sort_index(ascending=True).values
     laplace = False
 
     root_values = np.unique(dataset[root_node_column].values)
