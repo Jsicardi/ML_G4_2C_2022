@@ -141,6 +141,9 @@ def analyze_text_file(properties:Properties):
     dataset = dataset[['fecha','titular','categoria']]
 
     dataset = dataset.loc[dataset[dataset.columns[2]].isin(properties.categories)]
+
+    #shuffle dataset to avoid using same order
+    dataset = dataset.sample(frac=1)
     
     og_dataset = dataset.loc[dataset[dataset.columns[2]] == properties.categories[0]]
     total_training = int(len(og_dataset) * (1 - properties.test_percentage))
