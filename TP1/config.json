@@ -1,11 +1,28 @@
 {
     "type": "titles",
     "training_file": "resources/ej2_dataset.xlsx",
-    "test_file" : "resources/ej3_test.csv",
-    "categories": ["Internacional","Salud","Economia","Deportes"],
+    "test_file": "resources/ej3_test.csv",
+    "output_file": "resources/classifier_results_9",
+    "test_categories_file": "resources/ej2_test_categories_9",
+    "categories": [
+        "Internacional",
+        "Salud",
+        "Economia",
+        "Deportes"
+    ],
     "max_attributes": 50,
     "remove_characters": ",;:.\n!\"'?!",
     "test_percentage": 0.2,
-    "network_graph" : ["rank",["gre","gpa"],"admit"],
-    "discretize_values" : [500,3]
+    "network_graph": [
+        "rank",
+        [
+            "gre",
+            "gpa"
+        ],
+        "admit"
+    ],
+    "discretize_values": [
+        500,
+        3
+    ]
 }

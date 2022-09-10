@@ -168,7 +168,7 @@ def analyze_text_file(properties:Properties):
 
     training_path = "resources/ej2_training.csv"
     test_path = "resources/ej2_test.csv"
-    test_categories_path = "resources/ej2_test_categories.csv"
+    test_categories_path = ("{0}.csv".format(properties.test_categories_file))
 
     generate_training_file(training_title_words,training_title_categories,attributes_dic,training_path)
     generate_test_file(test_title_words,attributes_dic,test_path)
@@ -179,7 +179,7 @@ def analyze_text_file(properties:Properties):
     aux_file = pathlib.Path(aux_test_path)
     aux_file.unlink()
 
-    return Properties(properties.type,training_path,test_path,properties.categories,properties.max_attributes,properties.max_attributes,properties.test_percentage)
+    return Properties(properties.type,training_path,properties.output_file,test_path,properties.test_categories_file,properties.categories,properties.max_attributes,properties.max_attributes,properties.test_percentage)
 
 
 

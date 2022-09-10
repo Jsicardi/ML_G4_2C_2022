@@ -11,18 +11,18 @@ def __main__():
         classifier_properties:ClassifierProperties = get_classifier_properties(properties)
         classifier:NaiveClassifier = NaiveClassifier()
         output:ClassifierOutput = classifier.classify(classifier_properties)
-        generate_classifier_output(classifier_properties,output)
+        generate_classifier_output(classifier_properties,output,properties)
     elif(properties.type == "titles"):
         properties = analyze_text_file(properties)
         classifier_properties:ClassifierProperties = get_classifier_properties(properties)
         classifier:NaiveClassifier = NaiveClassifier()
         output:ClassifierOutput = classifier.classify(classifier_properties)
-        generate_classifier_output(classifier_properties,output)
+        generate_classifier_output(classifier_properties,output,properties)
     elif(properties.type == "admission"):
         network_properties:NetworkProperties = get_network_properties(properties)
         network:BayesianNetwork = BayesianNetwork()
         output:ClassifierOutput = network.classify(network_properties)
-        generate_network_output(network_properties,output)
+        generate_network_output(network_properties,output,properties)
 
 if __name__ == "__main__":
     __main__()

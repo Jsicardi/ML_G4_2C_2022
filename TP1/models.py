@@ -1,8 +1,10 @@
 class Properties:
-    def __init__(self,type,training_file,test_file=None,categories=None,max_attributes=None,remove_characters=None,test_percentage=None,network_graph=None,discretize_values=None):
+    def __init__(self,type,training_file,output_file,test_file=None,test_categories_file=None,categories=None,max_attributes=None,remove_characters=None,test_percentage=None,network_graph=None,discretize_values=None):
         self.type = type
         self.training_file = training_file
         self.test_file = test_file
+        self.output_file = output_file
+        self.test_categories_file = test_categories_file
         self.categories = categories
         self.max_attributes = max_attributes
         self.test_percentage = test_percentage

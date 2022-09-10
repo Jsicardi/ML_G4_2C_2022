@@ -5,8 +5,8 @@ import pandas as pd
 import pathlib
 from probabities_helper import get_newtwork_probabilities, get_probabilities
 
-def generate_classifier_output(properties:ClassifierProperties, output:ClassifierOutput):
-    result_file = open("resources/classifier_results.csv", "w")
+def generate_classifier_output(properties:ClassifierProperties, output:ClassifierOutput,og_properties:Properties):
+    result_file = open("{0}.csv".format(og_properties.output_file), "w")
     columns_line = "Prediction"
     for class_name in properties.classes:
         columns_line = columns_line + ",prob_{0}".format(class_name)
@@ -19,8 +19,8 @@ def generate_classifier_output(properties:ClassifierProperties, output:Classifie
             line = line + ",{0}".format(prob)
         result_file.write("{0}\n".format(line))
 
-def generate_network_output(properties:NetworkProperties, output:ClassifierOutput):
-    result_file = open("resources/classifier_results.csv", "w")
+def generate_network_output(properties:NetworkProperties, output:ClassifierOutput,og_properties:Properties):
+    result_file = open("{0}.csv".format(og_properties.output_file), "w")
     columns_line = "Prediction"
     for class_name in properties.classes:
         columns_line = columns_line + ",prob_{0}".format(class_name)
@@ -52,11 +52,23 @@ def parse_properties():
         print("Training file required")
         exit(-1)
 
+    output_file = json_values.get("output_file")
+    if output_file == None:
+        print("Output file name required")
+        exit(-1)
+
     test = None
     if type != "titles":
         test = json_values.get("test_file")
         if test == None:
             print("Test file required")
+            exit(-1)
+
+    test_categories_file = None
+    if type == "titles":
+        test_categories_file = json_values.get("test_categories_file")
+        if test_categories_file == None:
+            print("Test categories file required")
             exit(-1)
 
     categories = json_values.get("categories")
@@ -90,7 +102,7 @@ def parse_properties():
         print("Discretize values required")
         exit(-1)
 
-    return Properties(type,training,test,categories,max_attributes,remove_characters,test_percentage,network_graph,discretize_values)
+    return Properties(type,training,output_file,test,test_categories_file,categories,max_attributes,remove_characters,test_percentage,network_graph,discretize_values)
 
 def parse_xlsx_file(file):
     xls = pd.ExcelFile(file)
