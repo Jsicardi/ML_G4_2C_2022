@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import csv
 import pathlib
@@ -93,7 +94,11 @@ def get_attributes(properties:Properties,sorted_categories_dic):
     attributes = []
     
     for (cat_idx,category) in enumerate(properties.categories):
-        attributes.extend(list(sorted_categories_dic[cat_idx].keys())[:properties.max_attributes]) 
+        key_list = list(sorted_categories_dic[cat_idx].keys())
+        if(len(key_list) >= properties.max_attributes):
+            attributes.extend(key_list[:properties.max_attributes])
+        else:
+            attributes.extend(key_list) 
     attributes_dic = {}
     
     for attribute in attributes:
@@ -102,6 +107,9 @@ def get_attributes(properties:Properties,sorted_categories_dic):
     return attributes_dic
 
 def generate_training_file(training_title_words,training_title_categories,attributes_dic,training_path):
+    if(os.path.exists(training_path)):
+        os.remove(training_path)
+
     with open(training_path,"w") as f:
         f.write("{0},category\n".format(','.join(list(attributes_dic.keys()))))
         for (title_idx,title) in enumerate(training_title_words):
@@ -116,6 +124,9 @@ def generate_training_file(training_title_words,training_title_categories,attrib
             f.write("{0}\n".format(','.join(map(str,title_attrs))))
 
 def generate_test_file(test_title_words,attributes_dic,test_path):
+    if(os.path.exists(test_path)):
+        os.remove(test_path)
+        
     with open(test_path,"w") as f:
         f.write("{0}\n".format(','.join(list(attributes_dic.keys()))))
         for (title_idx,title) in enumerate(test_title_words):
@@ -143,7 +154,7 @@ def analyze_text_file(properties:Properties):
     dataset = dataset.loc[dataset[dataset.columns[2]].isin(properties.categories)]
 
     #shuffle dataset to avoid using same order
-    dataset = dataset.sample(frac=1)
+    dataset = dataset.sample(frac=1).reset_index(drop=True)
     
     og_dataset = dataset.loc[dataset[dataset.columns[2]] == properties.categories[0]]
     total_training = int(len(og_dataset) * (1 - properties.test_percentage))
