@@ -9,7 +9,7 @@ class Properties:
         self.output_file = output_file
         self.target_attribute = target_attribute
         self.k = k
-
+        
 class TreeProperties:
     def __init__(self,training_dataset,target_attribute,test_dataset,test_classification,attributes_max):
         self.traning_dataset = training_dataset
@@ -18,6 +18,11 @@ class TreeProperties:
         self.test_classification = test_classification
         self.attributes_max = attributes_max
 
+class TreeOutput:
+    def __init__(self,predictions,test_classifications):
+        self.predictions = predictions
+        self.test_classifications = test_classifications
+        
 class Tree:
     def __init__(self,root):
         self.root = root

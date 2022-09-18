@@ -2,6 +2,6 @@
     "type": "tree",
     "dataset_file": "resources/curated_german_credit.csv",
     "output_file": "resources/tree_results.csv",
-    "target_attribute" : "Credibility",
-    "k" : 1
+    "target_attribute" : "Creditability",
+    "k" : 4
 }

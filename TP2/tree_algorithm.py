@@ -1,6 +1,7 @@
 import numpy as np
+import pandas as pd
 import math
-from models import Node,TreeProperties,Tree
+from models import Node, Properties, TreeOutput,TreeProperties,Tree
 from helper_functions import shannon_entropy,gain
 import logging
 
@@ -63,15 +64,58 @@ def log_tree(root:Node):
 def build_tree(treeProperties:TreeProperties):
     training_dataset = treeProperties.traning_dataset
     if not(0 in training_dataset[treeProperties.target_attribute]):
+        logging.debug("All negatives")
         return Tree(Node(None,[],treeProperties.target_attribute,1))
     if not(1 in training_dataset[treeProperties.target_attribute]):
+        logging.debug("All positives")
         return Tree(Node(None,[],treeProperties.target_attribute,0))
     #TODO case empty attributes
 
     return Tree(get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[]))
 
+def classify_example(treeProperties:TreeProperties,tree:Tree,dataset,row):
+    current_node:Node = tree.root
 
-def classify_with_tree(treeProperties:TreeProperties):
-    tree:Tree = build_tree(treeProperties)
-    log_tree(tree.root)
+    while(current_node.attribute != treeProperties.target_attribute):
+        current_childs = current_node.childs
+        attr_value = dataset[current_node.attribute].values[row]
+        for current_child in current_childs:
+            if(current_child.attribute_value == attr_value):
+                break
+        current_node = current_child.childs[0]
+    
+    return current_node.attribute_value
 
+def classify_with_tree(tree:Tree,treeProperties:TreeProperties,dataset):
+    predictions = []
+    for row_idx in range(len(dataset)):
+        predictions.append(classify_example(treeProperties,tree,dataset,row_idx))
+    return predictions
+
+def get_training_dataset(datasets,dataset_idx):
+    training_datasets = datasets.copy()
+    training_datasets.pop(dataset_idx)
+    training_dataset = pd.concat(training_datasets)
+    
+    return training_dataset
+
+def k_cross_classify(datasets,attributes_max,properties:Properties):
+    tree:Tree = None
+    predictions = []
+    test_classifications = []
+    treeProperties:TreeProperties = None
+
+    for (dataset_idx,dataset) in enumerate(datasets):
+        test_dataset = dataset
+        test_classification = test_dataset[properties.target_attribute].values
+        test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
+        training_dataset = get_training_dataset(datasets,dataset_idx)
+        
+        treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,attributes_max)
+        tree = build_tree(treeProperties)
+        
+        current_preds = classify_with_tree(tree,treeProperties,treeProperties.test_dataset)
+        predictions.append(current_preds)
+        test_classifications.append(test_classification)
+    
+    return TreeOutput(predictions,test_classifications)

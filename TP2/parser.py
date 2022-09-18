@@ -1,6 +1,15 @@
 import json
 import pandas as pd
-from models import Properties, TreeProperties
+from models import Properties, TreeOutput, TreeProperties
+
+def generate_output(output:TreeOutput,properties:Properties):
+    for (curr_idx,current_predictions) in enumerate(output.predictions):
+        test_classification = output.test_classifications[curr_idx]
+        with open("{0}_{1}.csv".format(properties.output_file,curr_idx), "w") as f:
+            f.write("Prediction,Creditability\n")
+            for (pred_idx,prediction) in enumerate(current_predictions):
+                f.write("{0},{1}\n".format(prediction,test_classification[pred_idx]))
+
 
 # Receive parameters from config.json and encapsulate them into properties object
 def parse_properties():
@@ -39,7 +48,9 @@ def parse_properties():
     return Properties(type,dataset,output_file,target_attribute,k)
 
 def process_dataset(properties:Properties):
+    
     dataset = pd.read_csv(properties.dataset_file)
+    dataset = dataset.sample(frac=1).reset_index(drop=True)
 
     attributes_max = []
 
@@ -49,12 +60,12 @@ def process_dataset(properties:Properties):
     for column_name in attributes:
         if(column_name != properties.target_attribute):
             attributes_max.append(dataset[column_name].max)
+
+    total_entries = len(dataset)
+    k_entries = int(total_entries / properties.k)
+
+    datasets = []
+    for iter in range(1,properties.k+1):
+        datasets.append(dataset.iloc[(k_entries * (iter-1)):k_entries * (iter)])
     
-    total_training = int(len(dataset) * (0.8))
-    training_dataset = dataset.iloc[:total_training]
-    test_dataset = dataset.iloc[total_training:]
-    test_classification = dataset[properties.target_attribute].values
-    test_dataset = dataset.drop([properties.target_attribute], axis=1)
-
-
-    return TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,attributes_max)
+    return (datasets,attributes_max)
