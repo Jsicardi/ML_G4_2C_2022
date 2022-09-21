@@ -1,3 +1,4 @@
+from itertools import tee
 import json
 import pandas as pd
 from models import Properties, TreeOutput, TreeProperties
@@ -9,13 +10,22 @@ def generate_output(output:TreeOutput,properties:Properties):
             f.write("Prediction,Creditability\n")
             for (pred_idx,prediction) in enumerate(current_predictions):
                 f.write("{0},{1}\n".format(prediction,test_classification[pred_idx]))
+    
+    generate_nodes_output(output,properties)
 
 def generate_forest_output(output:TreeOutput,properties:Properties):
     with open("{0}_{1}.csv".format(properties.output_file,properties.k), "w") as f:
         f.write("Prediction,Creditability\n")
         for(pred_idx,prediction) in enumerate(output.predictions):
            f.write("{0},{1}\n".format(prediction,output.test_classifications[pred_idx]))
+    
+    generate_nodes_output(output,properties)
 
+def generate_nodes_output(output:TreeOutput,properties:Properties):
+    with open("{0}.csv".format(properties.nodes_file), "w") as f:
+        f.write("Nodes\n")
+        for tree in output.trees:
+            f.write("{0}\n".format(tree.nodes))
 
 
 # Receive parameters from config.json and encapsulate them into properties object
@@ -42,6 +52,11 @@ def parse_properties():
         print("Output file name required")
         exit(-1)
 
+    nodes_file = json_values.get("nodes_file")
+    if nodes_file == None:
+        print("Nodes file name required")
+        exit(-1)
+
     target_attribute = json_values.get("target_attribute")
     if target_attribute == None:
         print("Target attribute required")
@@ -57,7 +72,7 @@ def parse_properties():
         print("Test percentage required")
         exit(-1)
 
-    return Properties(type,dataset,output_file,target_attribute,k,test_percentage)
+    return Properties(type,dataset,output_file,nodes_file,target_attribute,k,test_percentage)
 
 def process_dataset(properties:Properties):
     
@@ -80,7 +95,6 @@ def process_forest_dataset(properties:Properties):
 
     total_entries = len(dataset)
     test_entries = int(total_entries * properties.test_percentage)
-    print(test_entries)
 
     test_dataset = dataset.iloc[:test_entries]
     training_dataset = dataset.iloc[test_entries:]

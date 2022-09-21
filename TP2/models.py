@@ -3,10 +3,11 @@ from inspect import Attribute
 
 
 class Properties:
-    def __init__(self,type,dataset_file,output_file,target_attribute,k,test_percentage):
+    def __init__(self,type,dataset_file,output_file,nodes_file,target_attribute,k,test_percentage):
         self.type = type
         self.dataset_file = dataset_file
         self.output_file = output_file
+        self.nodes_file = nodes_file
         self.target_attribute = target_attribute
         self.k = k
         self.test_percentage = test_percentage
@@ -19,13 +20,15 @@ class TreeProperties:
         self.test_classification = test_classification
 
 class TreeOutput:
-    def __init__(self,predictions,test_classifications):
+    def __init__(self,predictions,test_classifications,trees):
         self.predictions = predictions
         self.test_classifications = test_classifications
-        
+        self.trees = trees
+
 class Tree:
-    def __init__(self,root):
+    def __init__(self,root,nodes):
         self.root = root
+        self.nodes = nodes
 
 class Node:
     def __init__(self,parent,childs,attribute,attribute_value,examples):

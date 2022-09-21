@@ -8,7 +8,7 @@ from helper_functions import shannon_entropy,gain
 import logging
 from collections import Counter
 
-def get_root_node(dataset, target_attribute,parent):
+def get_root_node(dataset,target_attribute,parent):
     
     #choose attribute with best gain
     attributes_gain = []
@@ -27,6 +27,8 @@ def get_root_node(dataset, target_attribute,parent):
 
     #create attribute node
     attr_node = Node(parent,[],attr_name,None,len(dataset))
+    
+    total_nodes = 1
 
     attr_values = np.unique(dataset[attr_name].values)
 
@@ -43,15 +45,18 @@ def get_root_node(dataset, target_attribute,parent):
             logging.debug("Leaf found with value {0}".format(classifications[0]))
             childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
             childs[-1].childs.append(Node(childs[-1],[],target_attribute,classifications[0],len(filtered_dataset)))
+            total_nodes+=2
         else:
             logging.debug("Recursive action needed")
             childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
-            childs[-1].childs.append(get_root_node(filtered_dataset,target_attribute,childs[-1]))
+            (new_node, nodes) = get_root_node(filtered_dataset,target_attribute,childs[-1])
+            childs[-1].childs.append(new_node)
+            total_nodes+=(1+nodes)
     
     for child in childs:
         attr_node.childs.append(child)
     
-    return attr_node
+    return (attr_node,total_nodes)
 
 
 def log_tree(root:Node):
@@ -68,13 +73,14 @@ def build_tree(treeProperties:TreeProperties):
     training_dataset = treeProperties.traning_dataset
     if not(0 in training_dataset[treeProperties.target_attribute]):
         logging.debug("All positives")
-        return Tree(Node(None,[],treeProperties.target_attribute,1,len(training_dataset)))
+        return Tree(Node(None,[],treeProperties.target_attribute,1,len(training_dataset)),1)
     if not(1 in training_dataset[treeProperties.target_attribute]):
         logging.debug("All negatives")
-        return Tree(Node(None,[],treeProperties.target_attribute,0,len(training_dataset)))
+        return Tree(Node(None,[],treeProperties.target_attribute,0,len(training_dataset)),1)
     #TODO case empty attributes
 
-    return Tree(get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[]))
+    (root_node,nodes) = get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[])
+    return Tree(root_node,nodes)
 
 def classify_example(treeProperties:TreeProperties,tree:Tree,dataset,row):
     current_node:Node = tree.root
@@ -113,7 +119,7 @@ def get_training_dataset(datasets,dataset_idx):
     return training_dataset
 
 def k_cross_classify(datasets,properties:Properties):
-    tree:Tree = None
+    trees = []
     predictions = []
     test_classifications = []
     treeProperties:TreeProperties = None
@@ -125,13 +131,13 @@ def k_cross_classify(datasets,properties:Properties):
         training_dataset = get_training_dataset(datasets,dataset_idx)
         
         treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification)
-        tree = build_tree(treeProperties)
+        trees.append(build_tree(treeProperties))
         
-        current_preds = classify_with_tree(tree,treeProperties,treeProperties.test_dataset)
+        current_preds = classify_with_tree(trees[-1],treeProperties,treeProperties.test_dataset)
         predictions.append(current_preds)
         test_classifications.append(test_classification)
     
-    return TreeOutput(predictions,test_classifications)
+    return TreeOutput(predictions,test_classifications,trees)
 
 def random_forest_classify(training_dataset,test_dataset,properties:Properties):
 
@@ -139,7 +145,6 @@ def random_forest_classify(training_dataset,test_dataset,properties:Properties):
     predictions = []
     test_classification = test_dataset[properties.target_attribute].values
     test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
-    print(len(test_dataset))
     treeProperties = []
 
     #Create trees from training datasets created from te original
@@ -157,4 +162,4 @@ def random_forest_classify(training_dataset,test_dataset,properties:Properties):
         occurence_count = Counter(examples_predictions)
         predictions.append(occurence_count.most_common(1)[0][0])
     
-    return TreeOutput(predictions,test_classification)
+    return TreeOutput(predictions,test_classification,trees)
