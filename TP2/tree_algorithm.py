@@ -1,9 +1,12 @@
+from dataclasses import replace
+from random import random
 import numpy as np
 import pandas as pd
 import math
 from models import Node, Properties, TreeOutput,TreeProperties,Tree
 from helper_functions import shannon_entropy,gain
 import logging
+from collections import Counter
 
 def get_root_node(dataset, target_attribute,parent):
     
@@ -23,7 +26,7 @@ def get_root_node(dataset, target_attribute,parent):
     logging.debug("Attribute {0} selected".format(attr_name))
 
     #create attribute node
-    attr_node = Node(parent,[],attr_name,None)
+    attr_node = Node(parent,[],attr_name,None,len(dataset))
 
     attr_values = np.unique(dataset[attr_name].values)
 
@@ -38,11 +41,11 @@ def get_root_node(dataset, target_attribute,parent):
         #a leaf is found, so the branch is finished
         if len(classifications) == 1:
             logging.debug("Leaf found with value {0}".format(classifications[0]))
-            childs.append(Node(attr_node,[],attr_name,attr_value))
-            childs[-1].childs.append(Node(childs[-1],[],target_attribute,classifications[0]))
+            childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
+            childs[-1].childs.append(Node(childs[-1],[],target_attribute,classifications[0],len(filtered_dataset)))
         else:
             logging.debug("Recursive action needed")
-            childs.append(Node(attr_node,[],attr_name,attr_value))
+            childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
             childs[-1].childs.append(get_root_node(filtered_dataset,target_attribute,childs[-1]))
     
     for child in childs:
@@ -64,11 +67,11 @@ def log_tree(root:Node):
 def build_tree(treeProperties:TreeProperties):
     training_dataset = treeProperties.traning_dataset
     if not(0 in training_dataset[treeProperties.target_attribute]):
-        logging.debug("All negatives")
-        return Tree(Node(None,[],treeProperties.target_attribute,1))
-    if not(1 in training_dataset[treeProperties.target_attribute]):
         logging.debug("All positives")
-        return Tree(Node(None,[],treeProperties.target_attribute,0))
+        return Tree(Node(None,[],treeProperties.target_attribute,1,len(training_dataset)))
+    if not(1 in training_dataset[treeProperties.target_attribute]):
+        logging.debug("All negatives")
+        return Tree(Node(None,[],treeProperties.target_attribute,0,len(training_dataset)))
     #TODO case empty attributes
 
     return Tree(get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[]))
@@ -78,17 +81,27 @@ def classify_example(treeProperties:TreeProperties,tree:Tree,dataset,row):
 
     while(current_node.attribute != treeProperties.target_attribute):
         current_childs = current_node.childs
+        selected_child = None
         attr_value = dataset[current_node.attribute].values[row]
+        child_examples = []
         for current_child in current_childs:
+            child_examples.append(current_child.examples)
             if(current_child.attribute_value == attr_value):
+                selected_child = current_child
                 break
-        current_node = current_child.childs[0]
+            
+        if(selected_child == None):
+            logging.debug("Found case with attribute {0} when classify can't be done".format(current_node.attribute,attr_value))
+            selected_idx = child_examples.index(max(child_examples))
+            selected_child = current_childs[selected_idx]
+            
+        current_node = selected_child.childs[0]
     
     return current_node.attribute_value
 
 def classify_with_tree(tree:Tree,treeProperties:TreeProperties,dataset):
     predictions = []
-    for row_idx in range(len(dataset)):
+    for row_idx in range(len(dataset.values)):
         predictions.append(classify_example(treeProperties,tree,dataset,row_idx))
     return predictions
 
@@ -99,7 +112,7 @@ def get_training_dataset(datasets,dataset_idx):
     
     return training_dataset
 
-def k_cross_classify(datasets,attributes_max,properties:Properties):
+def k_cross_classify(datasets,properties:Properties):
     tree:Tree = None
     predictions = []
     test_classifications = []
@@ -111,7 +124,7 @@ def k_cross_classify(datasets,attributes_max,properties:Properties):
         test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
         training_dataset = get_training_dataset(datasets,dataset_idx)
         
-        treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,attributes_max)
+        treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification)
         tree = build_tree(treeProperties)
         
         current_preds = classify_with_tree(tree,treeProperties,treeProperties.test_dataset)
@@ -119,3 +132,29 @@ def k_cross_classify(datasets,attributes_max,properties:Properties):
         test_classifications.append(test_classification)
     
     return TreeOutput(predictions,test_classifications)
+
+def random_forest_classify(training_dataset,test_dataset,properties:Properties):
+
+    trees = []
+    predictions = []
+    test_classification = test_dataset[properties.target_attribute].values
+    test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
+    print(len(test_dataset))
+    treeProperties = []
+
+    #Create trees from training datasets created from te original
+    training_datasets = []
+    for i in range(properties.k):
+        training_datasets.append(training_dataset.sample(frac=1,replace=True).reset_index(drop=True))
+        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification))
+        trees.append(build_tree(treeProperties[-1]))
+    
+    predictions = []
+    for test_idx in range(len(test_dataset.values)):
+        examples_predictions = []
+        for (tree_idx,tree) in enumerate(trees):
+            examples_predictions.append(classify_example(treeProperties[tree_idx],tree,test_dataset,test_idx))
+        occurence_count = Counter(examples_predictions)
+        predictions.append(occurence_count.most_common(1)[0][0])
+    
+    return TreeOutput(predictions,test_classification)

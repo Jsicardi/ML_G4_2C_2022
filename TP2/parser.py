@@ -5,10 +5,17 @@ from models import Properties, TreeOutput, TreeProperties
 def generate_output(output:TreeOutput,properties:Properties):
     for (curr_idx,current_predictions) in enumerate(output.predictions):
         test_classification = output.test_classifications[curr_idx]
-        with open("{0}_{1}.csv".format(properties.output_file,curr_idx), "w") as f:
+        with open("{0}_{1}_{2}.csv".format(properties.output_file,properties.k,curr_idx), "w") as f:
             f.write("Prediction,Creditability\n")
             for (pred_idx,prediction) in enumerate(current_predictions):
                 f.write("{0},{1}\n".format(prediction,test_classification[pred_idx]))
+
+def generate_forest_output(output:TreeOutput,properties:Properties):
+    with open("{0}_{1}.csv".format(properties.output_file,properties.k), "w") as f:
+        f.write("Prediction,Creditability\n")
+        for(pred_idx,prediction) in enumerate(output.predictions):
+           f.write("{0},{1}\n".format(prediction,output.test_classifications[pred_idx]))
+
 
 
 # Receive parameters from config.json and encapsulate them into properties object
@@ -45,21 +52,17 @@ def parse_properties():
         print("K required")
         exit(-1)
 
-    return Properties(type,dataset,output_file,target_attribute,k)
+    test_percentage = json_values.get("test_percentage")
+    if test_percentage == None and type == "forest":
+        print("Test percentage required")
+        exit(-1)
+
+    return Properties(type,dataset,output_file,target_attribute,k,test_percentage)
 
 def process_dataset(properties:Properties):
     
     dataset = pd.read_csv(properties.dataset_file)
     dataset = dataset.sample(frac=1).reset_index(drop=True)
-
-    attributes_max = []
-
-    attributes = dataset.columns.values.tolist()
-    attributes.remove(properties.target_attribute)
-
-    for column_name in attributes:
-        if(column_name != properties.target_attribute):
-            attributes_max.append(dataset[column_name].max)
 
     total_entries = len(dataset)
     k_entries = int(total_entries / properties.k)
@@ -68,4 +71,18 @@ def process_dataset(properties:Properties):
     for iter in range(1,properties.k+1):
         datasets.append(dataset.iloc[(k_entries * (iter-1)):k_entries * (iter)])
     
-    return (datasets,attributes_max)
+    return datasets
+
+def process_forest_dataset(properties:Properties):
+    
+    dataset = pd.read_csv(properties.dataset_file)
+    dataset = dataset.sample(frac=1).reset_index(drop=True)
+
+    total_entries = len(dataset)
+    test_entries = int(total_entries * properties.test_percentage)
+    print(test_entries)
+
+    test_dataset = dataset.iloc[:test_entries]
+    training_dataset = dataset.iloc[test_entries:]
+    
+    return (training_dataset,test_dataset)
