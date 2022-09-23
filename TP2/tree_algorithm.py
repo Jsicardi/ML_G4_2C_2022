@@ -27,8 +27,6 @@ def get_root_node(dataset,target_attribute,parent):
 
     #create attribute node
     attr_node = Node(parent,[],attr_name,None,len(dataset))
-    
-    total_nodes = 1
 
     attr_values = np.unique(dataset[attr_name].values)
 
@@ -45,18 +43,16 @@ def get_root_node(dataset,target_attribute,parent):
             logging.debug("Leaf found with value {0}".format(classifications[0]))
             childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
             childs[-1].childs.append(Node(childs[-1],[],target_attribute,classifications[0],len(filtered_dataset)))
-            total_nodes+=2
         else:
             logging.debug("Recursive action needed")
             childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
-            (new_node, nodes) = get_root_node(filtered_dataset,target_attribute,childs[-1])
+            new_node = get_root_node(filtered_dataset,target_attribute,childs[-1])
             childs[-1].childs.append(new_node)
-            total_nodes+=(1+nodes)
     
     for child in childs:
         attr_node.childs.append(child)
     
-    return (attr_node,total_nodes)
+    return attr_node
 
 
 def log_tree(root:Node):
@@ -68,6 +64,16 @@ def log_tree(root:Node):
             for child in root_child.childs:
                 log_tree(child)
 
+def count_tree_nods(root:Node, target_attribute):
+    total_nodes = 0
+    if(root.attribute == target_attribute):
+        return 1
+    for root_child in root.childs:
+        total_nodes+=1
+        for child in root_child.childs:
+            total_nodes+=(count_tree_nods(child,target_attribute))
+
+    return total_nodes
 
 def build_tree(treeProperties:TreeProperties):
     training_dataset = treeProperties.traning_dataset
@@ -79,8 +85,8 @@ def build_tree(treeProperties:TreeProperties):
         return Tree(Node(None,[],treeProperties.target_attribute,0,len(training_dataset)),1)
     #TODO case empty attributes
 
-    (root_node,nodes) = get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[])
-    return Tree(root_node,nodes)
+    root_node = get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[])
+    return Tree(root_node,0)
 
 def classify_example(treeProperties:TreeProperties,tree:Tree,dataset,row):
     current_node:Node = tree.root
@@ -132,6 +138,7 @@ def k_cross_classify(datasets,properties:Properties):
         
         treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification)
         trees.append(build_tree(treeProperties))
+        trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
         
         current_preds = classify_with_tree(trees[-1],treeProperties,treeProperties.test_dataset)
         predictions.append(current_preds)
@@ -153,6 +160,7 @@ def random_forest_classify(training_dataset,test_dataset,properties:Properties):
         training_datasets.append(training_dataset.sample(frac=1,replace=True).reset_index(drop=True))
         treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification))
         trees.append(build_tree(treeProperties[-1]))
+        trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
     
     predictions = []
     for test_idx in range(len(test_dataset.values)):
