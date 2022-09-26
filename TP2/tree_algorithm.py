@@ -3,12 +3,12 @@ from random import random
 import numpy as np
 import pandas as pd
 import math
-from models import Node, Properties, TreeOutput,TreeProperties,Tree
+from models import Node, NodesTestOutput, Properties, TreeOutput,TreeProperties,Tree
 from helper_functions import shannon_entropy,gain
 import logging
 from collections import Counter
 
-def get_root_node(dataset,target_attribute,parent):
+def get_root_node(dataset,target_attribute,parent,max_depth,level):
     
     #choose attribute with best gain
     attributes_gain = []
@@ -31,6 +31,7 @@ def get_root_node(dataset,target_attribute,parent):
     attr_values = np.unique(dataset[attr_name].values)
 
     childs = []
+    
     for attr_value in attr_values:
         logging.debug("Using attribute {0} value {1}".format(attr_name,attr_value))
 
@@ -44,10 +45,17 @@ def get_root_node(dataset,target_attribute,parent):
             childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
             childs[-1].childs.append(Node(childs[-1],[],target_attribute,classifications[0],len(filtered_dataset)))
         else:
-            logging.debug("Recursive action needed")
-            childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
-            new_node = get_root_node(filtered_dataset,target_attribute,childs[-1])
-            childs[-1].childs.append(new_node)
+            if((max_depth != -1 and level == max_depth-1)):
+                logging.debug("Max depth reached")
+                logging.debug("Leaf created with value {0}".format(filtered_dataset[target_attribute].mode().values[0]))
+                childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
+                childs[-1].childs.append(Node(childs[-1],[],target_attribute,filtered_dataset[target_attribute].mode().values[0],len(filtered_dataset)))
+            else:
+
+                logging.debug("Recursive action needed")
+                childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
+                new_node = get_root_node(filtered_dataset,target_attribute,childs[-1],max_depth,level+1)
+                childs[-1].childs.append(new_node)
     
     for child in childs:
         attr_node.childs.append(child)
@@ -68,8 +76,8 @@ def count_tree_nods(root:Node, target_attribute):
     total_nodes = 0
     if(root.attribute == target_attribute):
         return 1
+    total_nodes+=1
     for root_child in root.childs:
-        total_nodes+=1
         for child in root_child.childs:
             total_nodes+=(count_tree_nods(child,target_attribute))
 
@@ -77,15 +85,15 @@ def count_tree_nods(root:Node, target_attribute):
 
 def build_tree(treeProperties:TreeProperties):
     training_dataset = treeProperties.traning_dataset
-    if not(0 in training_dataset[treeProperties.target_attribute]):
+    if not(0 in training_dataset[treeProperties.target_attribute].values):
         logging.debug("All positives")
         return Tree(Node(None,[],treeProperties.target_attribute,1,len(training_dataset)),1)
-    if not(1 in training_dataset[treeProperties.target_attribute]):
+    if not(1 in training_dataset[treeProperties.target_attribute].values):
         logging.debug("All negatives")
         return Tree(Node(None,[],treeProperties.target_attribute,0,len(training_dataset)),1)
     #TODO case empty attributes
 
-    root_node = get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[])
+    root_node = get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[],treeProperties.max_depth,0)
     return Tree(root_node,0)
 
 def classify_example(treeProperties:TreeProperties,tree:Tree,dataset,row):
@@ -136,7 +144,7 @@ def k_cross_classify(datasets,properties:Properties):
         test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
         training_dataset = get_training_dataset(datasets,dataset_idx)
         
-        treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification)
+        treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,properties.max_depth)
         trees.append(build_tree(treeProperties))
         trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
         
@@ -158,7 +166,7 @@ def random_forest_classify(training_dataset,test_dataset,properties:Properties):
     training_datasets = []
     for i in range(properties.k):
         training_datasets.append(training_dataset.sample(frac=1,replace=True).reset_index(drop=True))
-        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification))
+        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification,properties.max_depth))
         trees.append(build_tree(treeProperties[-1]))
         trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
     
@@ -171,3 +179,97 @@ def random_forest_classify(training_dataset,test_dataset,properties:Properties):
         predictions.append(occurence_count.most_common(1)[0][0])
     
     return TreeOutput(predictions,test_classification,trees)
+
+def tree_nodes_test(training_dataset,test_dataset,properties:Properties):
+    
+    training_precisions = []
+    test_precisions = []
+    nodes = []
+    depths = []
+    trees = []
+    training_classification = training_dataset[properties.target_attribute].values
+    test_classification = test_dataset[properties.target_attribute].values
+    test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
+    test_examples = len(test_dataset.values)
+    training_examples = len(training_dataset.values)
+
+    treeProperties = []
+    
+    for depth in range(1,properties.max_depth+1):
+        treeProperties.append(TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,depth))
+        trees.append(build_tree(treeProperties[-1]))
+        trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
+        nodes.append(trees[-1].nodes)
+        depths.append(depth)
+
+    for (tree_idx,tree) in enumerate(trees):
+        correct_examples = 0
+        for training_idx in range(training_examples):
+            class_predicted = classify_example(treeProperties[tree_idx],tree,training_dataset,training_idx)
+            if(class_predicted == training_classification[training_idx]):
+                correct_examples+=1
+        training_precisions.append(correct_examples/training_examples)
+
+    for (tree_idx,tree) in enumerate(trees):
+        correct_examples = 0
+        for test_idx in range(test_examples):
+            class_predicted = classify_example(treeProperties[tree_idx],tree,test_dataset,test_idx)
+            if(class_predicted == test_classification[test_idx]):
+                correct_examples+=1
+        test_precisions.append(correct_examples/test_examples)
+
+    return NodesTestOutput(training_precisions,test_precisions,nodes,depths)
+
+def single_forest_precision(training_dataset,test_dataset,properties:Properties,depth):
+    trees = []
+    nodes = []
+    test_classification = test_dataset[properties.target_attribute].values
+    training_classification = training_dataset[properties.target_attribute].values
+    test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
+    treeProperties = []
+
+    #Create trees from training datasets created from te original
+    training_datasets = []
+    for i in range(properties.k):
+        training_datasets.append(training_dataset.sample(frac=1,replace=True).reset_index(drop=True))
+        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification,depth))
+        trees.append(build_tree(treeProperties[-1]))
+        trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
+        nodes.append(trees[-1].nodes)
+    
+    correct_training_examples = 0
+    for training_idx in range(len(training_dataset.values)):
+        examples_predictions = []
+        for (tree_idx,tree) in enumerate(trees):
+            examples_predictions.append(classify_example(treeProperties[tree_idx],tree,training_dataset,training_idx))
+        occurence_count = Counter(examples_predictions)
+        selected_prediction = occurence_count.most_common(1)[0][0]; 
+        if(selected_prediction == training_classification[training_idx]):
+            correct_training_examples+=1
+
+    correct_test_examples = 0
+    for test_idx in range(len(test_dataset.values)):
+        examples_predictions = []
+        for (tree_idx,tree) in enumerate(trees):
+            examples_predictions.append(classify_example(treeProperties[tree_idx],tree,test_dataset,test_idx))
+        occurence_count = Counter(examples_predictions)
+        selected_prediction = occurence_count.most_common(1)[0][0]; 
+        if(selected_prediction == test_classification[test_idx]):
+            correct_test_examples+=1
+
+    return (correct_training_examples / len(training_classification), correct_test_examples / len(test_classification), int(np.average(nodes))) 
+
+def forest_nodes_test(training_dataset,test_dataset,properties:Properties):
+    depths = []
+    nodes = []
+    training_precisions = []
+    test_precisions = []
+
+    for depth in range(1,properties.max_depth+1):
+        (training_precision,test_precision,tree_nodes) = single_forest_precision(training_dataset,test_dataset,properties,depth)
+        nodes.append(tree_nodes)
+        training_precisions.append(training_precision)
+        test_precisions.append(test_precision)
+        depths.append(depth)
+
+    return NodesTestOutput(training_precisions,test_precisions,nodes,depths)

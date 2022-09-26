@@ -1,7 +1,8 @@
 from itertools import tee
 import json
+from platform import node
 import pandas as pd
-from models import Properties, TreeOutput, TreeProperties
+from models import NodesTestOutput, Properties, TreeOutput, TreeProperties
 
 def generate_output(output:TreeOutput,properties:Properties):
     for (curr_idx,current_predictions) in enumerate(output.predictions):
@@ -22,10 +23,21 @@ def generate_forest_output(output:TreeOutput,properties:Properties):
     generate_nodes_output(output,properties)
 
 def generate_nodes_output(output:TreeOutput,properties:Properties):
-    with open("{0}.csv".format(properties.nodes_file), "w") as f:
+    with open(properties.nodes_file, "w") as f:
         f.write("Nodes\n")
         for tree in output.trees:
             f.write("{0}\n".format(tree.nodes))
+
+def generate_node_test_output(output:NodesTestOutput,properties:Properties):
+    with open("{0}_training.csv".format(properties.output_file),"w") as f:
+        f.write("Precision,Depth,Nodes\n")
+        for (depth_idx,depth) in enumerate(output.depths):
+            f.write("{0},{1},{2}\n".format(output.training_precisions[depth_idx],depth,output.nodes[depth_idx]))
+    with open("{0}_test.csv".format(properties.output_file),"w") as f:
+        f.write("Precision,Depth,Nodes\n")
+        for (depth_idx,depth) in enumerate(output.depths):
+            f.write("{0},{1},{2}\n".format(output.test_precisions[depth_idx],depth,output.nodes[depth_idx]))
+
 
 
 # Receive parameters from config.json and encapsulate them into properties object
@@ -41,6 +53,11 @@ def parse_properties():
         print("Type required")
         exit(-1)
 
+    nodes_test = json_values.get("nodes_test")
+    if nodes_test == None:
+        print("Nodes test value required")
+        exit(-1)
+    
     dataset = json_values.get("dataset_file")
 
     if dataset == None:
@@ -66,15 +83,22 @@ def parse_properties():
     if k == None:
         print("K required")
         exit(-1)
-
+        
     test_percentage = json_values.get("test_percentage")
-    if test_percentage == None and type == "forest":
+    if test_percentage == None and (type == "forest" or nodes_test):
         print("Test percentage required")
         exit(-1)
+    
+    max_depth = json_values.get("max_depth")
+    if max_depth == None and nodes_test:
+        print("Max depth required")
+        exit(-1)
+    if max_depth == None:
+        max_depth = -1
 
-    return Properties(type,dataset,output_file,nodes_file,target_attribute,k,test_percentage)
+    return Properties(type,dataset,output_file,nodes_file,target_attribute,k,test_percentage,nodes_test,max_depth)
 
-def process_dataset(properties:Properties):
+def process_dataset_cross_validate(properties:Properties):
     
     dataset = pd.read_csv(properties.dataset_file)
     dataset = dataset.sample(frac=1).reset_index(drop=True)
@@ -88,7 +112,7 @@ def process_dataset(properties:Properties):
     
     return datasets
 
-def process_forest_dataset(properties:Properties):
+def process_dataset(properties:Properties):
     
     dataset = pd.read_csv(properties.dataset_file)
     dataset = dataset.sample(frac=1).reset_index(drop=True)
