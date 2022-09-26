@@ -1,6 +1,7 @@
 from itertools import tee
 import json
 from platform import node
+import sys
 import pandas as pd
 from models import NodesTestOutput, Properties, TreeOutput, TreeProperties
 
@@ -28,7 +29,7 @@ def generate_nodes_output(output:TreeOutput,properties:Properties):
         for tree in output.trees:
             f.write("{0}\n".format(tree.nodes))
 
-def generate_node_test_output(output:NodesTestOutput,properties:Properties):
+def generate_node_test_depth_output(output:NodesTestOutput,properties:Properties):
     with open("{0}_training.csv".format(properties.output_file),"w") as f:
         f.write("Precision,Depth,Nodes\n")
         for (depth_idx,depth) in enumerate(output.depths):
@@ -38,6 +39,15 @@ def generate_node_test_output(output:NodesTestOutput,properties:Properties):
         for (depth_idx,depth) in enumerate(output.depths):
             f.write("{0},{1},{2}\n".format(output.test_precisions[depth_idx],depth,output.nodes[depth_idx]))
 
+def generate_node_test_output(output:NodesTestOutput,properties:Properties):
+    with open("{0}_training.csv".format(properties.output_file),"w") as f:
+        f.write("Precision,Nodes\n")
+        for (nodes_idx,nodes) in enumerate(output.nodes):
+            f.write("{0},{1}\n".format(output.training_precisions[nodes_idx],nodes))
+    with open("{0}_test.csv".format(properties.output_file),"w") as f:
+        f.write("Precision,Nodes\n")
+        for (nodes_idx,nodes) in enumerate(output.nodes):
+            f.write("{0},{1}\n".format(output.test_precisions[nodes_idx],nodes))
 
 
 # Receive parameters from config.json and encapsulate them into properties object
@@ -90,13 +100,22 @@ def parse_properties():
         exit(-1)
     
     max_depth = json_values.get("max_depth")
-    if max_depth == None and nodes_test:
-        print("Max depth required")
+    max_nodes = json_values.get("max_nodes")
+
+    if max_depth == None and max_nodes == None and nodes_test:
+        print("Max depth or max nodes are required")
         exit(-1)
     if max_depth == None:
-        max_depth = -1
+        max_depth = sys.maxsize
+    if max_nodes == None:
+        max_nodes = sys.maxsize
 
-    return Properties(type,dataset,output_file,nodes_file,target_attribute,k,test_percentage,nodes_test,max_depth)
+    nodes_step = json_values.get("nodes_step")
+    if nodes_step == None and nodes_test:
+        print("Nodes step required")
+        exit(-1)
+
+    return Properties(type,dataset,output_file,nodes_file,target_attribute,k,test_percentage,nodes_test,max_depth,max_nodes,nodes_step)
 
 def process_dataset_cross_validate(properties:Properties):
     

@@ -1,7 +1,7 @@
 import os
 from platform import node
 from models import NodesTestOutput, Properties, TreeOutput, TreeProperties,Tree
-from parser import generate_forest_output, generate_node_test_output, generate_output, parse_properties, process_dataset, process_dataset_cross_validate
+from parser import generate_forest_output, generate_node_test_depth_output, generate_node_test_output, generate_output, parse_properties, process_dataset, process_dataset_cross_validate
 from tree_algorithm import build_tree, classify_with_tree, forest_nodes_test,k_cross_classify, random_forest_classify, tree_nodes_test
 import logging
 
@@ -30,7 +30,10 @@ def __main__():
             output = tree_nodes_test(training_dataset,test_dataset,properties)
         else:
             output = forest_nodes_test(training_dataset,test_dataset,properties)
-        generate_node_test_output(output,properties) 
+        if(len(output.depths) == 0):
+            generate_node_test_output(output,properties)
+        else:
+            generate_node_test_depth_output(output,properties) 
 
 
 

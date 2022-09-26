@@ -1,11 +1,12 @@
 {
     "type": "tree",
-    "nodes_test": false,
+    "nodes_test": true,
     "dataset_file": "resources/curated_german_credit.csv",
-    "output_file": "resources/forest_test_precisions",
-    "nodes_file": "resources/forest_test_nodes.csv",
+    "output_file": "resources/max_nodes_test",
+    "nodes_file": "resources/max_nodes_nodes.csv",
     "target_attribute" : "Creditability",
     "k" : 6,
     "test_percentage": 0.2,
-    "max_depth": 10
+    "max_nodes": 500,
+    "nodes_step": 50
 }

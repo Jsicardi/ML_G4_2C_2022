@@ -8,7 +8,18 @@ from helper_functions import shannon_entropy,gain
 import logging
 from collections import Counter
 
-def get_root_node(dataset,target_attribute,parent,max_depth,level):
+def log_tree(root:Node):
+    logging.debug("Node with attribute: {0} Value:{1}".format(root.attribute,root.attribute_value if(root.attribute_value != None) else "-"))
+    for root_child in root.childs:
+        logging.debug("Child with attribute:{0} Value:{1}".format(root_child.attribute,root_child.attribute_value))
+    for root_child in root.childs:
+        if(len(root_child.childs) != 0):
+            for child in root_child.childs:
+                log_tree(child)
+
+def get_root_node(dataset,target_attribute,parent,max_depth,level,max_nodes,total_nodes):
+    
+    nodes = 0 
     
     #choose attribute with best gain
     attributes_gain = []
@@ -16,7 +27,6 @@ def get_root_node(dataset,target_attribute,parent,max_depth,level):
     attributes.remove(target_attribute)
     for attribute in attributes:
         gain_val = gain(dataset,attribute,target_attribute)
-        logging.debug("Gain val for attribute {0} is {1}".format(attribute,gain_val))
         attributes_gain.append(gain(dataset,attribute,target_attribute))
 
     max_gain = max(attributes_gain)
@@ -27,6 +37,11 @@ def get_root_node(dataset,target_attribute,parent,max_depth,level):
 
     #create attribute node
     attr_node = Node(parent,[],attr_name,None,len(dataset))
+    nodes+=1
+
+    if(nodes+total_nodes >= max_nodes):
+        logging.debug("Reached max nodes, deleting attribute node")
+        return (Node(parent,[],target_attribute,dataset[target_attribute].mode().values[0],len(dataset)),nodes)
 
     attr_values = np.unique(dataset[attr_name].values)
 
@@ -38,39 +53,35 @@ def get_root_node(dataset,target_attribute,parent,max_depth,level):
         filtered_dataset = dataset.loc[dataset[attr_name] == attr_value]
         filtered_dataset = filtered_dataset.drop([attr_name], axis=1)
         classifications = np.unique(filtered_dataset[target_attribute].values)
+
+        if(nodes+total_nodes >= max_nodes):
+            logging.debug("Reached max nodes")
+            continue
         
         #a leaf is found, so the branch is finished
         if len(classifications) == 1:
             logging.debug("Leaf found with value {0}".format(classifications[0]))
             childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
             childs[-1].childs.append(Node(childs[-1],[],target_attribute,classifications[0],len(filtered_dataset)))
+            nodes+=1
         else:
             if((max_depth != -1 and level == max_depth-1)):
                 logging.debug("Max depth reached")
                 logging.debug("Leaf created with value {0}".format(filtered_dataset[target_attribute].mode().values[0]))
                 childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
                 childs[-1].childs.append(Node(childs[-1],[],target_attribute,filtered_dataset[target_attribute].mode().values[0],len(filtered_dataset)))
+                nodes+=1
             else:
-
                 logging.debug("Recursive action needed")
                 childs.append(Node(attr_node,[],attr_name,attr_value,len(filtered_dataset)))
-                new_node = get_root_node(filtered_dataset,target_attribute,childs[-1],max_depth,level+1)
+                (new_node,total_new_nodes) = get_root_node(filtered_dataset,target_attribute,childs[-1],max_depth,level+1,max_nodes,total_nodes+nodes)
+                nodes+=total_new_nodes
                 childs[-1].childs.append(new_node)
     
     for child in childs:
         attr_node.childs.append(child)
     
-    return attr_node
-
-
-def log_tree(root:Node):
-    logging.debug("Node with attribute: {0} Value:{1}".format(root.attribute,root.attribute_value if(root.attribute_value != None) else "-"))
-    for root_child in root.childs:
-        logging.debug("Child with attribute:{0} Value:{1}".format(root_child.attribute,root_child.attribute_value))
-    for root_child in root.childs:
-        if(len(root_child.childs) != 0):
-            for child in root_child.childs:
-                log_tree(child)
+    return (attr_node,nodes)
 
 def count_tree_nods(root:Node, target_attribute):
     total_nodes = 0
@@ -91,10 +102,9 @@ def build_tree(treeProperties:TreeProperties):
     if not(1 in training_dataset[treeProperties.target_attribute].values):
         logging.debug("All negatives")
         return Tree(Node(None,[],treeProperties.target_attribute,0,len(training_dataset)),1)
-    #TODO case empty attributes
 
-    root_node = get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[],treeProperties.max_depth,0)
-    return Tree(root_node,0)
+    (root_node,nodes) = get_root_node(treeProperties.traning_dataset, treeProperties.target_attribute,[],treeProperties.max_depth,0,treeProperties.max_nodes,0)
+    return Tree(root_node,nodes)
 
 def classify_example(treeProperties:TreeProperties,tree:Tree,dataset,row):
     current_node:Node = tree.root
@@ -144,9 +154,10 @@ def k_cross_classify(datasets,properties:Properties):
         test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
         training_dataset = get_training_dataset(datasets,dataset_idx)
         
-        treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,properties.max_depth)
+        treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,properties.max_depth,properties.max_nodes)
         trees.append(build_tree(treeProperties))
         trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
+        log_tree(trees[-1].root)
         
         current_preds = classify_with_tree(trees[-1],treeProperties,treeProperties.test_dataset)
         predictions.append(current_preds)
@@ -166,7 +177,7 @@ def random_forest_classify(training_dataset,test_dataset,properties:Properties):
     training_datasets = []
     for i in range(properties.k):
         training_datasets.append(training_dataset.sample(frac=1,replace=True).reset_index(drop=True))
-        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification,properties.max_depth))
+        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification,properties.max_depth,properties.max_nodes))
         trees.append(build_tree(treeProperties[-1]))
         trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
     
@@ -180,7 +191,7 @@ def random_forest_classify(training_dataset,test_dataset,properties:Properties):
     
     return TreeOutput(predictions,test_classification,trees)
 
-def tree_nodes_test(training_dataset,test_dataset,properties:Properties):
+def tree_nodes_test_depth(training_dataset,test_dataset,properties:Properties):
     
     training_precisions = []
     test_precisions = []
@@ -196,7 +207,7 @@ def tree_nodes_test(training_dataset,test_dataset,properties:Properties):
     treeProperties = []
     
     for depth in range(1,properties.max_depth+1):
-        treeProperties.append(TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,depth))
+        treeProperties.append(TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,depth,properties.max_nodes))
         trees.append(build_tree(treeProperties[-1]))
         trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
         nodes.append(trees[-1].nodes)
@@ -220,7 +231,7 @@ def tree_nodes_test(training_dataset,test_dataset,properties:Properties):
 
     return NodesTestOutput(training_precisions,test_precisions,nodes,depths)
 
-def single_forest_precision(training_dataset,test_dataset,properties:Properties,depth):
+def single_forest_precision(training_dataset,test_dataset,properties:Properties,depth,max_nodes):
     trees = []
     nodes = []
     test_classification = test_dataset[properties.target_attribute].values
@@ -232,7 +243,7 @@ def single_forest_precision(training_dataset,test_dataset,properties:Properties,
     training_datasets = []
     for i in range(properties.k):
         training_datasets.append(training_dataset.sample(frac=1,replace=True).reset_index(drop=True))
-        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification,depth))
+        treeProperties.append(TreeProperties(training_datasets[-1],properties.target_attribute,test_dataset,test_classification,depth,max_nodes))
         trees.append(build_tree(treeProperties[-1]))
         trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
         nodes.append(trees[-1].nodes)
@@ -259,7 +270,7 @@ def single_forest_precision(training_dataset,test_dataset,properties:Properties,
 
     return (correct_training_examples / len(training_classification), correct_test_examples / len(test_classification), int(np.average(nodes))) 
 
-def forest_nodes_test(training_dataset,test_dataset,properties:Properties):
+def forest_nodes_test_depth(training_dataset,test_dataset,properties:Properties):
     depths = []
     nodes = []
     training_precisions = []
@@ -273,3 +284,57 @@ def forest_nodes_test(training_dataset,test_dataset,properties:Properties):
         depths.append(depth)
 
     return NodesTestOutput(training_precisions,test_precisions,nodes,depths)
+
+def tree_nodes_test(training_dataset,test_dataset,properties:Properties):
+    
+    training_precisions = []
+    test_precisions = []
+    nodes_vec = []
+    depths = []
+    trees = []
+    training_classification = training_dataset[properties.target_attribute].values
+    test_classification = test_dataset[properties.target_attribute].values
+    test_dataset = test_dataset.drop([properties.target_attribute], axis=1)
+    test_examples = len(test_dataset.values)
+    training_examples = len(training_dataset.values)
+
+    treeProperties = []
+    
+    for nodes in range(0,properties.max_nodes+properties.nodes_step,properties.nodes_step):
+        treeProperties.append(TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,properties.max_depth,nodes))
+        trees.append(build_tree(treeProperties[-1]))
+        trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
+        nodes_vec.append(trees[-1].nodes)
+
+    for (tree_idx,tree) in enumerate(trees):
+        correct_examples = 0
+        for training_idx in range(training_examples):
+            class_predicted = classify_example(treeProperties[tree_idx],tree,training_dataset,training_idx)
+            if(class_predicted == training_classification[training_idx]):
+                correct_examples+=1
+        training_precisions.append(correct_examples/training_examples)
+
+    for (tree_idx,tree) in enumerate(trees):
+        correct_examples = 0
+        for test_idx in range(test_examples):
+            class_predicted = classify_example(treeProperties[tree_idx],tree,test_dataset,test_idx)
+            if(class_predicted == test_classification[test_idx]):
+                correct_examples+=1
+        test_precisions.append(correct_examples/test_examples)
+
+    return NodesTestOutput(training_precisions,test_precisions,nodes_vec,depths)
+
+def forest_nodes_test(training_dataset,test_dataset,properties:Properties):
+    depths = []
+    nodes_vec = []
+    training_precisions = []
+    test_precisions = []
+
+    for nodes in range(0,properties.max_nodes+properties.nodes_step,properties.nodes_step):
+        (training_precision,test_precision,tree_nodes) = single_forest_precision(training_dataset,test_dataset,properties,properties.max_depth,nodes)
+        nodes_vec.append(tree_nodes)
+        training_precisions.append(training_precision)
+        test_precisions.append(test_precision)
+
+    return NodesTestOutput(training_precisions,test_precisions,nodes_vec,depths)
+
