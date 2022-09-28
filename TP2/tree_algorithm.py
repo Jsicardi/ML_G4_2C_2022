@@ -157,7 +157,6 @@ def k_cross_classify(datasets,properties:Properties):
         treeProperties = TreeProperties(training_dataset,properties.target_attribute,test_dataset,test_classification,properties.max_depth,properties.max_nodes)
         trees.append(build_tree(treeProperties))
         trees[-1].nodes = count_tree_nods(trees[-1].root,properties.target_attribute)
-        log_tree(trees[-1].root)
         
         current_preds = classify_with_tree(trees[-1],treeProperties,treeProperties.test_dataset)
         predictions.append(current_preds)
@@ -277,7 +276,7 @@ def forest_nodes_test_depth(training_dataset,test_dataset,properties:Properties)
     test_precisions = []
 
     for depth in range(1,properties.max_depth+1):
-        (training_precision,test_precision,tree_nodes) = single_forest_precision(training_dataset,test_dataset,properties,depth)
+        (training_precision,test_precision,tree_nodes) = single_forest_precision(training_dataset,test_dataset,properties,depth,properties.max_nodes)
         nodes.append(tree_nodes)
         training_precisions.append(training_precision)
         test_precisions.append(test_precision)

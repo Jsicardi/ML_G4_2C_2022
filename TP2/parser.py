@@ -9,7 +9,7 @@ def generate_output(output:TreeOutput,properties:Properties):
     for (curr_idx,current_predictions) in enumerate(output.predictions):
         test_classification = output.test_classifications[curr_idx]
         with open("{0}_{1}_{2}.csv".format(properties.output_file,properties.k,curr_idx), "w") as f:
-            f.write("Prediction,Creditability\n")
+            f.write("Prediction,{0}\n".format(properties.target_attribute))
             for (pred_idx,prediction) in enumerate(current_predictions):
                 f.write("{0},{1}\n".format(prediction,test_classification[pred_idx]))
     
@@ -17,7 +17,7 @@ def generate_output(output:TreeOutput,properties:Properties):
 
 def generate_forest_output(output:TreeOutput,properties:Properties):
     with open("{0}_{1}.csv".format(properties.output_file,properties.k), "w") as f:
-        f.write("Prediction,Creditability\n")
+        f.write("Prediction,{0}\n".format(properties.target_attribute))
         for(pred_idx,prediction) in enumerate(output.predictions):
            f.write("{0},{1}\n".format(prediction,output.test_classifications[pred_idx]))
     
@@ -111,7 +111,7 @@ def parse_properties():
         max_nodes = sys.maxsize
 
     nodes_step = json_values.get("nodes_step")
-    if nodes_step == None and nodes_test:
+    if nodes_step == None and max_depth == None and nodes_test:
         print("Nodes step required")
         exit(-1)
 
