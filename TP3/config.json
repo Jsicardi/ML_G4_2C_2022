@@ -1,0 +1,12 @@
+{
+    "type" : "perceptron",
+    "dataset": "resources/samples_100.csv",
+    "output_file": "resources/perceptron_results",
+    "weights_file": "resources/perceptron_weigths",
+    "class_column": "Y",
+    "learning_rate" : 0.1,
+    "max_epochs" : 100,
+    "min_error": 1e-15,
+    "test_proportion": 0.2
+}
+
