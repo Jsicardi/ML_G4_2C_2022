@@ -20,12 +20,11 @@ def train_perceptron(perceptron:Perceptron):
     i = len(training_set)
     indexes = []
     previous_inc = None
-    epochs = -1
-    while error > perceptron.min_error and epochs < perceptron.max_epochs:
+    iters = 0
+    while error > perceptron.min_error and iters < perceptron.max_iters:
         # Always pick at random or random until covered whole training set and then random again?
         #pos = random.randint(0, len(training_set) - 1)
         if(i == len(training_set)):
-            epochs+=1
             indexes = random.sample(list(range(len(training_set))),len(list(range(len(training_set)))))
             i = 0
         pos = indexes[i]
@@ -35,12 +34,15 @@ def train_perceptron(perceptron:Perceptron):
         delta_w = perceptron.learning_rate * (output_set[pos] - O) * entry * perceptron.d_function(h)
         w += delta_w
         error = calculate_error(perceptron.function,training_set, output_set,w)
+        
         if error < min_error:
             min_error = error
             min_w = w.copy()
+        
         i+=1
+        iters+=1
     
-    return (min_w,min_error,epochs)
+    return (min_w,min_error,iters)
 
 def calculate_error(perceptron_function,training_set, output_set, w):
     error = 0
@@ -85,11 +87,11 @@ def simple_execute(properties:Properties):
     training_set = training_dataset.values
     test_set = test_dataset.values
 
-    perceptron = Perceptron(training_set,test_set,training_output_set,test_output_set,properties.learning_rate,properties.max_epochs,properties.min_error,step_function,d_identity)
+    perceptron = Perceptron(training_set,test_set,training_output_set,test_output_set,properties.rate_w,properties.max_iters,properties.min_error,step_function,d_identity)
 
-    (min_w,min_error,epochs) = train_perceptron(perceptron)
+    (min_w,min_error,iters) = train_perceptron(perceptron)
 
     training_results = classify(perceptron,perceptron.training_set,perceptron.output_set,min_w)
     test_results = classify(perceptron,perceptron.test_set,perceptron.test_output_set,min_w)
 
-    return (PerceptronObservables([min_w],[epochs],[training_results],[test_results]),perceptron)
+    return (PerceptronObservables([min_w],[iters],[training_results],[test_results]),perceptron)
