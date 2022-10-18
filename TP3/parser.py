@@ -69,5 +69,11 @@ def parse_properties():
     if min_error == None or min_error < 0:
         min_error = DEFAULT_ERROR
 
-    return Properties(type,dataset_path,output_path,weights_path,class_column,learning_rate,epochs,min_error,k,test_proportion)
+    dataset_shuffle = json_values.get("dataset_shuffle")
+
+    if dataset_shuffle == None:
+        print("Dataset shuffle required")
+        exit(-1)
+
+    return Properties(type,dataset_path,output_path,weights_path,class_column,learning_rate,epochs,min_error,k,test_proportion,dataset_shuffle)
     

@@ -13,7 +13,7 @@ class Perceptron:
         self.d_function = dfunction
 
 class Properties:
-    def __init__(self,type,dataset,output_path,weights_path,class_column,learning_rate,max_epochs,min_error,k,test_proportion):
+    def __init__(self,type,dataset,output_path,weights_path,class_column,learning_rate,max_epochs,min_error,k,test_proportion,dataset_shuffle):
         self.type = type
         self.dataset_path = dataset
         self.output_path = output_path
@@ -24,6 +24,7 @@ class Properties:
         self.min_error = min_error
         self.k = k
         self.test_proportion = test_proportion
+        self.dataset_shuffle = dataset_shuffle
 
 class PerceptronObservables:
     def __init__(self,w,epochs,training_classifications,test_classifications):

@@ -67,7 +67,8 @@ def classify(perceptron:Perceptron,set,output_set,w):
 def simple_execute(properties:Properties):
     dataset = pd.read_csv(properties.dataset_path)
 
-    dataset = dataset.sample(frac=1).reset_index(drop=True)
+    if(properties.dataset_shuffle):
+        dataset = dataset.sample(frac=1).reset_index(drop=True)
 
     total_entries = len(dataset)
     test_entries = int(total_entries * properties.test_proportion)
