@@ -1,6 +1,6 @@
 import json
 
-from models import SVN, Perceptron, PerceptronObservables, Properties, SVNObservables
+from models import SVM, Perceptron, PerceptronObservables, Properties, SVMObservables
 
 MIN_ITERS = 100
 DEFAULT_ERROR = 0
@@ -25,15 +25,15 @@ def generate_perceptron_output(observables:PerceptronObservables,properties:Prop
     generate_perceptron_results_output(properties,0,perceptron.training_set,perceptron.test_set,perceptron.output_set,observables.training_classifications[0],perceptron.test_output_set,observables.test_classifications[0])
     generate_perceptron_weigths_output(properties,observables.w,observables.iters)
     
-def generate_svn_weigths_output(properties:Properties,w,b,iters):
+def generate_svm_weigths_output(properties:Properties,w,b,iters):
     with open("{0}.csv".format(properties.weights_path), "w") as f:
         f.write("Iters,b,W1,W2\n")
         #for (weigths_idx,weigths) in enumerate(w):
         f.write("{0},{1},{2},{3}\n".format(iters,b,w[0],w[1]))
 
-def generate_svn_output(observables:SVNObservables,properties:Properties,svn:SVN):
-    generate_perceptron_results_output(properties,0,svn.training_set,svn.test_set,svn.output_set,observables.training_classifications,svn.test_output_set,observables.test_classifications)
-    generate_svn_weigths_output(properties,observables.w,observables.b,observables.iters)
+def generate_svn_output(observables:SVMObservables,properties:Properties,svm:SVM):
+    generate_perceptron_results_output(properties,0,svm.training_set,svm.test_set,svm.output_set,observables.training_classifications,svm.test_output_set,observables.test_classifications)
+    generate_svm_weigths_output(properties,observables.w,observables.b,observables.iters)
 
 def parse_properties():
     file = open('config.json')
@@ -67,7 +67,7 @@ def parse_properties():
 
     rate_b = json_values.get("rate_b")
 
-    if rate_b == None and type == "svn":
+    if rate_b == None and type == "svm":
         print("Rate b required")
         exit(-1)
 
@@ -92,15 +92,20 @@ def parse_properties():
 
     C = json_values.get("C")
 
-    if C == None and type=="svn":
+    if C == None and type=="svm":
         print("C required")
         exit(-1)
 
-    A = json_values.get("A")
+    Aw = json_values.get("Aw")
 
-    if A == None and type=="svn":
-        print("A required")
+    if Aw == None and type=="svm":
+        print("Aw required")
         exit(-1)
 
-    return Properties(type,dataset_path,output_path,weights_path,class_column,rate_w,rate_b,iters,min_error,k,test_proportion,dataset_shuffle,C,A)
+    Ab = json_values.get("Aw")
+
+    if Ab == None and type=="svm":
+        print("Ab required")
+        exit(-1)
+    return Properties(type,dataset_path,output_path,weights_path,class_column,rate_w,rate_b,iters,min_error,k,test_proportion,dataset_shuffle,C,Aw,Ab)
     

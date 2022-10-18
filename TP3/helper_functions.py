@@ -6,17 +6,14 @@ def step_function(h):
 def d_identity(h):
     return 1
 
-def db(t,C,output_set):
+def db(t,C,output):
     if(t<1):
-        return C*(-1)*np.sum(output_set)
+        return -C * output
     else:
         return 0
 
-def dw(t,C,w,set,output_set):
+def dw(t,C,w,example,output):
     if (t<1):
-        sum=0
-        for (idx,example) in enumerate(set):
-            sum += example*output_set[idx]
-        return w + (C * (-1) * sum)
+        return w - (C * example * output)
     else:
         return w

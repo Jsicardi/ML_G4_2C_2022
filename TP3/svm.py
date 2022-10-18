@@ -1,17 +1,17 @@
 import sys
-from models import SVN, Properties, SVNObservables
+from models import SVM, Properties, SVMObservables
 import random
 import numpy as np
 import pandas as pd
 from helper_functions import dw,db
 import math
 
-def train_svn(svn:SVN):
+def train_svm(svm:SVM):
 
-    kw = svn.rate_w
-    kb = svn.rate_b
-    training_set = svn.training_set
-    output = svn.output_set
+    kw = svm.rate_w
+    kb = svm.rate_b
+    training_set = svm.training_set
+    output = svm.output_set
     
     i = len(training_set)
     w = np.zeros(len(training_set[0]))
@@ -20,13 +20,13 @@ def train_svn(svn:SVN):
     iters = 0
     error = 0
     min_w = np.zeros(len(training_set[0]))
-    min_b = 0
+    min_b = sys.maxsize
     min_error = sys.maxsize
 
-    while iters < svn.max_iters:
+    while iters < svm.max_iters:
 
-        kw = svn.rate_w * math.exp(-svn.A * iters)
-        kb = svn.rate_b * math.exp(-svn.A * iters)
+        kw = svm.rate_w * math.exp(-svm.Aw * iters)
+        kb = svm.rate_b * math.exp(-svm.Ab * iters)
 
         if(i == len(training_set)):
             indexes = random.sample(list(range(len(training_set))),len(list(range(len(training_set)))))
@@ -37,8 +37,8 @@ def train_svn(svn:SVN):
 
         t = output[pos] * (np.dot(w,entry) + b)
 
-        w -= kw * svn.dw_function(t,svn.C,w,training_set,output)
-        b -= kb * svn.db_function(t,svn.C,output)
+        w -= kw * svm.dw_function(t,svm.C,w,entry,output[pos])
+        b -= kb * svm.db_function(t,svm.C,output[pos])
         
         error = calculate_error(training_set,output,w,b)
 
@@ -49,25 +49,26 @@ def train_svn(svn:SVN):
 
         iters+=1
         i+=1
-    
+
+    print(min_error)
     return (min_w,min_b,iters)
 
 def calculate_error(training_set,output_set,w,b):
-    wrong_classifications =0
+    error=0
 
     for (i,entry) in enumerate(training_set):
         t = output_set[i] * (np.dot(w,entry) + b)
         if(t < 1):
-            wrong_classifications+=1
+            error+=(1-t)
 
-    return wrong_classifications/len(training_set)
+    return error/len(training_set)
 
-def classify(svn:SVN,set,output_set,w,b):
+def classify(svm:SVM,set,output_set,w,b):
     results = []
 
     for (i,entry) in enumerate(set):
         t = output_set[i] * (np.dot(w,entry) + b)
-        print(t)
+        #print(t)
         if(t < 1):
             results.append(output_set[i] * (-1))
         else:
@@ -95,14 +96,14 @@ def simple_execute(properties:Properties):
     training_set = training_dataset.values
     test_set = test_dataset.values
 
-    svn = SVN(training_set,test_set,training_output_set,test_output_set,properties.rate_w,properties.rate_b,properties.max_iters,properties.min_error,dw,db,properties.C,properties.A)
+    svm = SVM(training_set,test_set,training_output_set,test_output_set,properties.rate_w,properties.rate_b,properties.max_iters,properties.min_error,dw,db,properties.C,properties.Aw,properties.Ab)
 
-    (min_w,min_b,iters) = train_svn(svn)
+    (min_w,min_b,iters) = train_svm(svm)
 
-    training_results =  classify(svn,training_set,training_output_set,min_w,min_b)
-    test_results =  classify(svn,test_set,test_output_set,min_w,min_b)
+    training_results =  classify(svm,training_set,training_output_set,min_w,min_b)
+    test_results =  classify(svm,test_set,test_output_set,min_w,min_b)
 
 
-    return (SVNObservables(min_w,min_b,iters,training_results,test_results),svn)
+    return (SVMObservables(min_w,min_b,iters,training_results,test_results),svm)
 
 
