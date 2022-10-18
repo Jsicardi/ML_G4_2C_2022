@@ -1,5 +1,5 @@
 {
-    "type" : "svn",
+    "type" : "perceptron",
     "dataset": "resources/samples_100_0.csv",
     "output_file": "resources/svn_results",
     "weights_file": "resources/svn_weigths",
@@ -7,7 +7,7 @@
     "rate_w" : 0.01,
     "rate_b": 0.01,
     "C":1,
-    "max_iters" : 500,
+    "max_iters" : 1000,
     "min_error": 1e-15,
     "test_proportion": 0.2,
     "dataset_shuffle": true,

@@ -16,9 +16,13 @@ def train_svn(svn:SVN):
     i = len(training_set)
     w = np.zeros(len(training_set[0]))
     b=0
+
     iters = 0
     error = 0
-    
+    min_w = np.zeros(len(training_set[0]))
+    min_b = 0
+    min_error = sys.maxsize
+
     while iters < svn.max_iters:
 
         kw = svn.rate_w * math.exp(-svn.A * iters)
@@ -33,22 +37,37 @@ def train_svn(svn:SVN):
 
         t = output[pos] * (np.dot(w,entry) + b)
 
-        print(t)
-
         w -= kw * svn.dw_function(t,svn.C,w,training_set,output)
         b -= kb * svn.db_function(t,svn.C,output)
         
+        error = calculate_error(training_set,output,w,b)
+
+        if(error < min_error):
+            min_error=error
+            min_w=w
+            min_b=b
+
         iters+=1
         i+=1
     
-    return (w,b,iters)
+    return (min_w,min_b,iters)
+
+def calculate_error(training_set,output_set,w,b):
+    wrong_classifications =0
+
+    for (i,entry) in enumerate(training_set):
+        t = output_set[i] * (np.dot(w,entry) + b)
+        if(t < 1):
+            wrong_classifications+=1
+
+    return wrong_classifications/len(training_set)
 
 def classify(svn:SVN,set,output_set,w,b):
     results = []
 
     for (i,entry) in enumerate(set):
         t = output_set[i] * (np.dot(w,entry) + b)
-        
+        print(t)
         if(t < 1):
             results.append(output_set[i] * (-1))
         else:
