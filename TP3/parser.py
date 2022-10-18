@@ -25,15 +25,17 @@ def generate_perceptron_output(observables:PerceptronObservables,properties:Prop
     generate_perceptron_results_output(properties,0,perceptron.training_set,perceptron.test_set,perceptron.output_set,observables.training_classifications[0],perceptron.test_output_set,observables.test_classifications[0])
     generate_perceptron_weigths_output(properties,observables.w,observables.iters)
     
-def generate_svm_weigths_output(properties:Properties,w,b,iters):
+def generate_svm_weigths_output(properties:Properties,w,b,iters,errors):
     with open("{0}.csv".format(properties.weights_path), "w") as f:
-        f.write("Iters,b,W1,W2\n")
-        #for (weigths_idx,weigths) in enumerate(w):
-        f.write("{0},{1},{2},{3}\n".format(iters,b,w[0],w[1]))
+        f.write("Errors,Iters,b,W1,W2\n")
+        for (weigths_idx,weigths) in enumerate(w):
+            f.write("{0},{1},{2},{3},{4}\n".format(errors[weigths_idx],iters[weigths_idx],b[weigths_idx],w[weigths_idx][0],w[weigths_idx][1]))
 
-def generate_svn_output(observables:SVMObservables,properties:Properties,svm:SVM):
-    generate_perceptron_results_output(properties,0,svm.training_set,svm.test_set,svm.output_set,observables.training_classifications,svm.test_output_set,observables.test_classifications)
-    generate_svm_weigths_output(properties,observables.w,observables.b,observables.iters)
+
+def generate_svm_output(observables:SVMObservables,properties:Properties,svms):
+    for (svm_idx,svm) in enumerate(svms):
+        generate_perceptron_results_output(properties,svm_idx,svm.training_set,svm.test_set,svm.output_set,observables.training_classifications[svm_idx],svm.test_output_set,observables.test_classifications[svm_idx])    
+    generate_svm_weigths_output(properties,observables.weights,observables.intercepts,observables.iters,observables.errors)
 
 def parse_properties():
     file = open('config.json')

@@ -55,9 +55,10 @@ class PerceptronObservables:
         self.test_classifications = test_classifications
 
 class SVMObservables:
-    def __init__(self,w,b,iters,training_classifications,test_classifications):
-        self.w = w
-        self.b = b
+    def __init__(self,weights,intercepts,iters,errors,training_classifications,test_classifications):
+        self.weights = weights
+        self.intercepts = intercepts
         self.iters = iters
+        self.errors = errors
         self.training_classifications = training_classifications
         self.test_classifications = test_classifications

@@ -50,8 +50,7 @@ def train_svm(svm:SVM):
         iters+=1
         i+=1
 
-    print(min_error)
-    return (min_w,min_b,iters)
+    return (min_w,min_b,iters,min_error)
 
 def calculate_error(training_set,output_set,w,b):
     error=0
@@ -98,12 +97,74 @@ def simple_execute(properties:Properties):
 
     svm = SVM(training_set,test_set,training_output_set,test_output_set,properties.rate_w,properties.rate_b,properties.max_iters,properties.min_error,dw,db,properties.C,properties.Aw,properties.Ab)
 
-    (min_w,min_b,iters) = train_svm(svm)
+    (min_w,min_b,iters,min_error) = train_svm(svm)
 
     training_results =  classify(svm,training_set,training_output_set,min_w,min_b)
     test_results =  classify(svm,test_set,test_output_set,min_w,min_b)
 
 
-    return (SVMObservables(min_w,min_b,iters,training_results,test_results),svm)
+    return (SVMObservables([min_w],[min_b],[iters],[min_error],[training_results],[test_results]),[svm])
+
+def get_training_dataset(datasets,dataset_idx):
+    training_datasets = datasets.copy()
+    training_datasets.pop(dataset_idx)
+    training_dataset = pd.concat(training_datasets)
+    
+    return training_dataset
+
+def k_cross_execute(properties:Properties):
+    dataset = pd.read_csv(properties.dataset_path)
+
+    if(properties.dataset_shuffle):
+        dataset = dataset.sample(frac=1).reset_index(drop=True)
+
+    total_entries = len(dataset)
+    k_entries = int(total_entries / properties.k)
+
+    datasets = []
+    for iter in range(1,properties.k+1):
+        datasets.append(dataset.iloc[(k_entries * (iter-1)):k_entries * (iter)])
+
+    svms = []
+    weights = []
+    intercepts = []
+    iterations = []
+    errors = []
+
+    training_classifications = []
+    test_classifications = []
+
+    for (dataset_idx,dataset) in enumerate(datasets):
+        
+        test_dataset = dataset
+        training_dataset = get_training_dataset(datasets,dataset_idx)
+
+        training_output_set = training_dataset[properties.class_column].values
+        test_output_set = test_dataset[properties.class_column].values
+
+        training_dataset = training_dataset.drop([properties.class_column], axis=1)
+        test_dataset = test_dataset.drop([properties.class_column], axis=1)
+
+        training_set = training_dataset.values
+        test_set = test_dataset.values
+
+        svm = SVM(training_set,test_set,training_output_set,test_output_set,properties.rate_w,properties.rate_b,properties.max_iters,properties.min_error,dw,db,properties.C,properties.Aw,properties.Ab)
+
+        svms.append(svm)
+
+        (min_w,min_b,iters,min_error) = train_svm(svm)
+
+        weights.append(min_w)
+        intercepts.append(min_b)
+        iterations.append(iters)
+        errors.append(min_error)
+
+        training_classifications.append(classify(svm,training_set,training_output_set,min_w,min_b))
+        test_classifications.append(classify(svm,test_set,test_output_set,min_w,min_b))
+    
+    return (SVMObservables(weights,intercepts,iterations,errors,training_classifications,test_classifications),svms)
+
+
+
 
 
