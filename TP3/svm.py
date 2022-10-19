@@ -57,14 +57,11 @@ def calculate_error(training_set,output_set,w,b,C):
 
 def classify(svm:SVM,set,output_set,w,b):
     results = []
+    gradient = -(w[0] / w[1])
+    intercept =  (b/w[1])
 
     for (i,entry) in enumerate(set):
-        t = output_set[i] * (np.dot(w,entry) + b)
-        #print(t)
-        if(t < 1):
-            results.append(output_set[i] * (-1))
-        else:
-            results.append(output_set[i])
+        results.append(np.sign(np.dot(entry, w) + b))
     return results
 
 def simple_execute(properties:Properties):
