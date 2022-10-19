@@ -3,7 +3,7 @@ from models import SVM, Properties, SVMObservables
 import random
 import numpy as np
 import pandas as pd
-from helper_functions import dw,db
+from helper_functions import dw,db,L_error
 import math
 
 def train_svm(svm:SVM):
@@ -14,12 +14,12 @@ def train_svm(svm:SVM):
     output = svm.output_set
     
     i = len(training_set)
-    w = np.zeros(len(training_set[0]))
+    w = np.ones(len(training_set[0]))
     b=0
 
     iters = 0
     error = 0
-    min_w = np.zeros(len(training_set[0]))
+    min_w = np.ones(len(training_set[0]))
     min_b = sys.maxsize
     min_error = sys.maxsize
 
@@ -40,7 +40,7 @@ def train_svm(svm:SVM):
         w -= kw * svm.dw_function(t,svm.C,w,entry,output[pos])
         b -= kb * svm.db_function(t,svm.C,output[pos])
         
-        error = calculate_error(training_set,output,w,b)
+        error = calculate_error(training_set,output,w,b,svm.C)
 
         if(error < min_error):
             min_error=error
@@ -52,15 +52,8 @@ def train_svm(svm:SVM):
 
     return (min_w,min_b,iters,min_error)
 
-def calculate_error(training_set,output_set,w,b):
-    error=0
-
-    for (i,entry) in enumerate(training_set):
-        t = output_set[i] * (np.dot(w,entry) + b)
-        if(t < 1):
-            error+=(1-t)
-
-    return error/len(training_set)
+def calculate_error(training_set,output_set,w,b,C):
+    return L_error(w,b,training_set,output_set,C)
 
 def classify(svm:SVM,set,output_set,w,b):
     results = []
