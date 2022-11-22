@@ -1,10 +1,15 @@
 {
-    "method" : "kohonen",
+    "method" : "hierarchical",
     "kohonen_props":{
         "dataset_path" : "resources/movie_data_curated.csv",
         "eta" : 0.1,
         "k" : 6,
         "r" : 1,
-        "epochs" : 2500
+        "epochs" : 2
+    },
+    "hierarchical_props":{
+        "dataset_path" : "resources/movie_data_curated.csv",
+        "k" : 3,
+        "distance" : "min"
     }
 }

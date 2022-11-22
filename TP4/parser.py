@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from models import KohonenObservables, KohonenProperties
+from models import KohonenObservables, KohonenProperties,HierarchicalProperties,HierarchicalObservables
 import pandas as pd
 
 def generate_kohonen_results(properties:KohonenProperties, observables:KohonenObservables):
@@ -20,14 +20,12 @@ def generate_kohonen_results(properties:KohonenProperties, observables:KohonenOb
             values = observables.weights_matrix.get((row_index,col_index))
             f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(row_index,col_index,values[0],values[1],values[2],values[3],values[4]))
 
-def generate_kohonen_output(properties:KohonenProperties, observables:KohonenObservables):
-    print("Method: {0}".format(properties.method))
-    print("Eta: {0}".format(properties.eta))
-    print("K: {0}".format(properties.k))
-    print("R: {0}".format(properties.r))
-    print("Epochs: {0}".format(properties.epochs))
-    print("See u_matrix.csv and classifications.csv")
-    generate_kohonen_results(properties,observables)
+def generate_hierarchical_results(properties:HierarchicalProperties,observables:HierarchicalObservables):
+    with open("resources/h_groups.csv", "w") as f:
+        f.write("Genre,Budget,Popularity,Revenue,Runtime,VoteAverage,Group\n")
+        for (g_idx, group) in enumerate(observables.groups):
+            for (m_idx,member) in enumerate(group.members):
+                f.write('{0},{1},{2},{3},{4},{5},{6}\n'.format(group.members_genres[m_idx],member[0],member[1],member[2],member[3],member[4],g_idx))
 
 def get_dataset(path):
     dataset = pd.read_csv(path, delimiter=",")
@@ -69,6 +67,32 @@ def parse_kohonen_properties(json_values):
     return KohonenProperties(ids,genres,input_set,eta,k,r,epochs)
 
 
+def parse_hierarchical_properties(json_values):
+    hierarchical_props = json_values.get("hierarchical_props")
+    if hierarchical_props == None:
+        print("Hierarchical properties are required")
+        exit(-1)
+    
+    dataset_path = hierarchical_props.get("dataset_path")
+    if dataset_path == None:
+        print("Path for dataset is required")
+        exit(-1)
+    
+    (ids,genres,input_set) = get_dataset(dataset_path)
+
+    k = hierarchical_props.get("k")
+    if k == None or k <= 0:
+        print("Positive k is required")
+        exit(-1)
+    
+    distance = hierarchical_props.get("distance")
+    if distance != 'max' and distance != 'min' and distance != 'avg' and distance != 'centroid'  :
+        print("Invalid distance method or distance method missing")
+        exit(-1)
+    
+    return HierarchicalProperties(ids,genres,input_set,distance,k)
+
+
 def parse_properties():
     file = open('config.json')
     json_values = json.load(file)
@@ -82,6 +106,9 @@ def parse_properties():
 
     if(method == "kohonen"):
         return parse_kohonen_properties(json_values)
+
+    if(method == "hierarchical"):
+        return parse_hierarchical_properties(json_values)
     
     print("Invalid method")
     exit(-1)
