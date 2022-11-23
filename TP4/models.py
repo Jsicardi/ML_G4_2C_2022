@@ -1,5 +1,11 @@
 import numpy as np
 
+class DistanceMethod():
+    MIN = 0
+    MAX = 1
+    AVG = 2
+    CENTROID = 3
+
 class HierarchicalProperties:
     def __init__(self,input_ids,input_genres,input_set,distance_method,k):
         self.method = "hierarchical"

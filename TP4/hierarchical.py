@@ -29,26 +29,21 @@ def centroid_distance(group1:HierarchicalGroup,group2:HierarchicalGroup):
     centroid2 = np.mean(group2.members, axis=0)
     return np.linalg.norm(centroid1-centroid2)
 
-def get_distance(group1:HierarchicalGroup,group2:HierarchicalGroup,method):
+def get_distance_method(method):
     if(method == 'min'):
-        return min_distance(group1,group2)
+        return min_distance
     elif(method == 'max'):
-        return max_distance(group1,group2)
+        return max_distance
     elif(method == 'avg'):
-        return avg_distance(group1,group2)
+        return avg_distance
     elif(method == 'centroid'):
-        return centroid_distance(group1,group2)
+        return centroid_distance
 
 def create_groups(input_set,input_genres):
     groups = []
     for (idx,input) in enumerate(input_set):
         groups.append(HierarchicalGroup([input],[input_genres[idx][0]]))
     return groups
-
-def merge_groups(g1:HierarchicalGroup,g2:HierarchicalGroup):
-    new_group_values = np.concatenate((g1.members, g2.members), axis=0)
-    new_group_genres = np.concatenate((g1.members_genres,g2.members_genres), axis=0)
-    return HierarchicalGroup(new_group_values,new_group_genres)
 
 def execute(properties:HierarchicalProperties):
     
@@ -60,10 +55,11 @@ def execute(properties:HierarchicalProperties):
     
     distances = np.zeros((len(groups), len(groups)))
     np.fill_diagonal(distances, math.inf)
+    distance_method = get_distance_method(properties.distance_method)
 
     for i in range(len(groups)):
         for j in range(i+1,len(groups)):
-            distance = get_distance(groups[i],groups[j],properties.distance_method)
+            distance = distance_method(groups[i],groups[j])
             distances[i][j] = distance
             distances[j][i] = distance
 
@@ -92,26 +88,24 @@ def execute(properties:HierarchicalProperties):
 
         #merge groups with minor distance
         group2:HierarchicalGroup = groups.pop(min_g2)
-        group1:HierarchicalGroup = groups[min_g1]
 
-        new_group:HierarchicalGroup = merge_groups(group1,group2)
-        #print(new_group.members)
-        groups[min_g1]=new_group
+        groups[min_g1].members.extend(group2.members)
+        groups[min_g1].members_genres.extend(group2.members_genres)
 
         #erase 
         distances = np.delete(distances,min_g2,0)
         distances = np.delete(distances,min_g2,1)
 
-        for i in range(len(distances)):
-            if(i == min_g1):
-                distances[i][min_g1] = math.inf
-            else:      
-                distance = get_distance(groups[i], new_group,properties.distance_method)
-                distances[i][min_g1] = distance
-                distances[min_g1][i] = distance
+        group1:HierarchicalGroup = groups[min_g1]
+
+        for i in range(len(groups)):    
+            distance = distance_method(groups[i], group1)
+            distances[i][min_g1] = distance
+            distances[min_g1][i] = distance
 
         total_groups-=1
         min_distance = sys.maxsize
+        distances[min_g1][min_g1]=math.inf
         print(total_groups)
 
     
